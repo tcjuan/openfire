@@ -126,7 +126,7 @@ public class Roster implements Cacheable, Externalizable {
 
         // Get the shared groups of this user
         Collection<Group> sharedGroups = rosterManager.getSharedGroups(username);
-        //Collection<Group> userGroups = GroupManager.getInstance().getGroups(getUserJID());
+        Collection<Group> userGroups = GroupManager.getInstance().getGroups(getUserJID());
 
         // Add RosterItems that belong to the personal roster
         rosterItemProvider = RosterManager.getRosterItemProvider();
@@ -200,6 +200,23 @@ public class Roster implements Cacheable, Externalizable {
                         ")");
             }
         }
+ 	// Add All Group Members
+          for(Group group : userGroups) {
+              Collection<JID> jids = group.getMembers();
+              for(JID jid : jids) {
+		      try{
+                Log.debug("[ROSTER] Adding :" + jid.toBareJID());
+                String nickname = "";
+                RosterItem item = new RosterItem(jid, RosterItem.SUB_BOTH, RosterItem.ASK_NONE,RosterItem.RECV_NONE, nickname , null);
+                item.setNickname(UserNameManager.getUserName(jid));
+                rosterItems.put(item.getJid().toBareJID(), item);
+	          } catch (UserNotFoundException e) {
+                  Log.error("Group (" + group + ") include non-existent username (" + jid.getNode() + ")");
+              }
+	      }	
+
+
+           }
         // Fire event indicating that a roster has just been loaded
         RosterEventDispatcher.rosterLoaded(this);
     }

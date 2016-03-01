@@ -13,6 +13,10 @@ clean:
 dpkg:
 	cd build && ant installer.debian
 
+rpm:
+	cd build && ant installer.rpm
+	cd target/release && sudo rpm -ivh  --replacefiles --force openfire-4.1.0.alpha-1.i386.rpm
+
 plugins:
 	cd build && ant plugins
 
