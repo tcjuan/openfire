@@ -7,6 +7,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
+import java.util.ArrayList;
 
 @XmlRootElement(name = "chatRoom")
 @XmlType(propOrder = { "roomName", "naturalName", "description", "password", "subject", "creationDate",
@@ -269,16 +270,19 @@ public class MUCRoomEntity {
 		return members;
 	}
 
-	@XmlElementWrapper(name = "memberGroups")
-	@XmlElement(name = "memberGroup")
-	public List<String> getmemberGroups() {
-		return memberGroups;
-	}
-
 	public void setMembers(List<String> members) {
 		this.members = members;
 	}
-
+	
+	@XmlElementWrapper(name = "memberGroups")
+	@XmlElement(name = "memberGroup")
+	public List<String> getmemberGroups() {
+		 if (memberGroups == null) {
+	            memberGroups = new ArrayList<String>();
+	        }
+		return memberGroups;
+	}
+	
 	public void setMemberGroups(List<String> memberGroups) {
 		this.memberGroups = memberGroups;
 	}

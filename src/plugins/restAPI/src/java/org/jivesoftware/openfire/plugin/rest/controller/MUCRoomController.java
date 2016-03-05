@@ -31,6 +31,22 @@ import org.jivesoftware.util.AlreadyExistsException;
 import org.jivesoftware.util.cache.CacheFactory;
 import org.xmpp.packet.JID;
 
+import org.dom4j.Element;
+import org.jivesoftware.openfire.group.GroupJID;
+import org.jivesoftware.openfire.group.GroupManager;
+import org.jivesoftware.util.ParamUtils;
+import org.jivesoftware.util.StringUtils;
+import org.xmpp.packet.IQ ;
+
+import java.net.URLEncoder ;
+import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import org.jivesoftware.openfire.muc.CannotBeInvitedException;
+
+
 /**
  * The Class MUCRoomController.
  */
@@ -138,6 +154,39 @@ public class MUCRoomController {
 	public void createChatRoom(String serviceName, MUCRoomEntity mucRoomEntity) throws ServiceException {
 		try {
 			createRoom(mucRoomEntity, serviceName);
+			
+			MUCRoom chatRoom = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(serviceName)
+					.getChatRoom(mucRoomEntity.getRoomName().toLowerCase());
+
+			JID roomJID = new JID(mucRoomEntity.getRoomName().toLowerCase()+ "@conference.ss.ohana.cc");
+			String roomName = roomJID.getNode();
+		//	MUCRoom room = webManager.getMultiUserChatManager().getMultiUserChatService(roomJID).getChatRoom(roomName);
+			ArrayList<String> memberJIDs = new ArrayList<String>();
+			if (mucRoomEntity.getmemberGroups() != null) {
+	    		// create a group JID for each group
+	    		for (String groupName : mucRoomEntity.getmemberGroups()) {
+	    			GroupJID groupJID = new GroupJID(groupName);
+	    			memberJIDs.add(groupJID.toString());
+	    		}
+	    	}
+			
+		    IQ iq = new IQ(IQ.Type.set);
+	        Element frag = iq.setChildElement("query", "http://jabber.org/protocol/muc#admin");
+	        for (String memberJID : memberJIDs){
+	              Element item = frag.addElement("item");
+	              item.addAttribute("affiliation", "member");
+	              item.addAttribute("jid", memberJID);
+	      	}
+	          // Send the IQ packet that will modify the room's configuration
+	        chatRoom.getIQAdminHandler().handleIQ(iq, chatRoom.getRole());
+	          // Log the event
+	         // for (String memberJID : memberJIDs) {
+	         // 	webManager.logEvent("set MUC affilation to "+affiliation+" for "+memberJID+" in "+roomName, null);
+	        //  }
+	          // done, return
+			
+			
+			
 		} catch (NotAllowedException e) {
 			throw new ServiceException("Could not create the channel", mucRoomEntity.getRoomName(),
 					ExceptionType.NOT_ALLOWED, Response.Status.FORBIDDEN, e);
@@ -150,7 +199,10 @@ public class MUCRoomController {
 		} catch (AlreadyExistsException e) {
 			throw new ServiceException("Could not create the channel", mucRoomEntity.getRoomName(),
 					ExceptionType.ALREADY_EXISTS, Response.Status.CONFLICT, e);
-		}
+		} catch (CannotBeInvitedException e) {
+			throw new ServiceException("CannotBeInvitedException", mucRoomEntity.getRoomName(),
+					ExceptionType.NOT_ALLOWED, Response.Status.FORBIDDEN, e);
+        }
 	}
 
 	/**
