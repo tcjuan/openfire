@@ -267,6 +267,9 @@ public class MUCRoomEntity {
 	@XmlElementWrapper(name = "members")
 	@XmlElement(name = "member")
 	public List<String> getMembers() {
+		 if (members == null) {
+	            members = new ArrayList<String>();
+	        }
 		return members;
 	}
 

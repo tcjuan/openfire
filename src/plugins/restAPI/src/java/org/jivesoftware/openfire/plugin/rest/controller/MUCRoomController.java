@@ -162,7 +162,7 @@ public class MUCRoomController {
 			String roomName = roomJID.getNode();
 		//	MUCRoom room = webManager.getMultiUserChatManager().getMultiUserChatService(roomJID).getChatRoom(roomName);
 			ArrayList<String> memberJIDs = new ArrayList<String>();
-			if (mucRoomEntity.getmemberGroups() != null) {
+			if (!mucRoomEntity.getmemberGroups().isEmpty()) {
 	    		// create a group JID for each group
 	    		for (String groupName : mucRoomEntity.getmemberGroups()) {
 	    			GroupJID groupJID = new GroupJID(groupName);
@@ -226,17 +226,102 @@ public class MUCRoomController {
 						"Could not update the channel. The room name is different to the entity room name.", roomName,
 						ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
 			}
-			createRoom(mucRoomEntity, serviceName);
+			// Set owner
+			JID owner = XMPPServer.getInstance().createJID("admin", null);
+			if (mucRoomEntity.getOwners() != null && mucRoomEntity.getOwners().size() > 0) {
+				owner = new JID(mucRoomEntity.getOwners().get(0));
+			} else {
+				List<String> owners = new ArrayList<String>();
+				owners.add(owner.toBareJID());
+				mucRoomEntity.setOwners(owners);
+			}
+
+			MUCRoom room = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(serviceName)
+					.getChatRoom(mucRoomEntity.getRoomName().toLowerCase(), owner);
+
+			// Set values
+			mucRoomEntity.setNaturalName(room.getNaturalLanguageName());
+			mucRoomEntity.setSubject(room.getSubject());
+			mucRoomEntity.setDescription(room.getDescription());
+			mucRoomEntity.setPassword(room.getPassword());
+			mucRoomEntity.setPersistent(room.isPersistent());
+			mucRoomEntity.setPublicRoom(room.isPublicRoom());
+			mucRoomEntity.setRegistrationEnabled(room.isRegistrationEnabled());
+			mucRoomEntity.setCanAnyoneDiscoverJID(room.canAnyoneDiscoverJID());
+			mucRoomEntity.setCanOccupantsChangeSubject(room.canOccupantsChangeSubject());
+			mucRoomEntity.setCanOccupantsInvite(room.canOccupantsInvite());
+			mucRoomEntity.setCanChangeNickname(room.canChangeNickname());
+			mucRoomEntity.setModificationDate(room.getModificationDate());
+			mucRoomEntity.setLogEnabled(room.isLogEnabled());
+			mucRoomEntity.setLoginRestrictedToNickname(room.isLoginRestrictedToNickname());
+			mucRoomEntity.setMaxUsers(room.getMaxUsers());
+			mucRoomEntity.setMembersOnly(room.isMembersOnly());
+			mucRoomEntity.setModerated(room.isModerated());
+			
+			
+	//		createRoom(mucRoomEntity, serviceName);
+			
+			MUCRoom chatRoom = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(serviceName)
+					.getChatRoom(mucRoomEntity.getRoomName().toLowerCase());
+
+			JID roomJID = new JID(mucRoomEntity.getRoomName().toLowerCase()+ "@conference.ss.ohana.cc");
+			roomName = roomJID.getNode();
+		//	MUCRoom room = webManager.getMultiUserChatManager().getMultiUserChatService(roomJID).getChatRoom(roomName);
+			ArrayList<String> memberJIDs = new ArrayList<String>();
+			if (!mucRoomEntity.getMembers().isEmpty()) {
+                // Escape username
+				for (String userJID : mucRoomEntity.getMembers()) {
+					 if (userJID.indexOf('@') == -1) {
+		                    String username = JID.escapeNode(userJID);
+		                    String domain = "ss.ohana.cc";
+		                    userJID = username + '@' + domain;
+		                }
+		                else {
+		                    String username = JID.escapeNode(userJID.substring(0, userJID.indexOf('@')));
+		                    String rest = userJID.substring(userJID.indexOf('@'), userJID.length());
+		                    userJID = username + rest.trim();
+		                }
+		         memberJIDs.add(userJID);
+	    		}
+        	}
+			
+			if (!mucRoomEntity.getmemberGroups().isEmpty()) {
+	    		// create a group JID for each group
+	    		for (String groupName : mucRoomEntity.getmemberGroups()) {
+	    			GroupJID groupJID = new GroupJID(groupName);
+	    			memberJIDs.add(groupJID.toString());
+	    		}
+	    	}
+			
+		    IQ iq = new IQ(IQ.Type.set);
+	        Element frag = iq.setChildElement("query", "http://jabber.org/protocol/muc#admin");
+	        for (String memberJID : memberJIDs){
+	              Element item = frag.addElement("item");
+	              item.addAttribute("affiliation", "member");
+	              item.addAttribute("jid", memberJID);
+	      	}
+	          // Send the IQ packet that will modify the room's configuration
+	        chatRoom.getIQAdminHandler().handleIQ(iq, chatRoom.getRole());
+	          // Log the event
+	         // for (String memberJID : memberJIDs) {
+	         // 	webManager.logEvent("set MUC affilation to "+affiliation+" for "+memberJID+" in "+roomName, null);
+	        //  }
+	          // done, return
+			
+			
 		} catch (NotAllowedException e) {
 			throw new ServiceException("Could not update the channel", roomName, ExceptionType.NOT_ALLOWED, Response.Status.FORBIDDEN, e);
 		} catch (ForbiddenException e) {
 			throw new ServiceException("Could not update the channel", roomName, ExceptionType.NOT_ALLOWED, Response.Status.FORBIDDEN, e);
 		} catch (ConflictException e) {
 			throw new ServiceException("Could not update the channel", roomName, ExceptionType.NOT_ALLOWED, Response.Status.CONFLICT, e);
-		} catch (AlreadyExistsException e) {
-			throw new ServiceException("Could not update the channel", mucRoomEntity.getRoomName(),
-					ExceptionType.ALREADY_EXISTS, Response.Status.CONFLICT, e);
-		}
+	//	} catch (AlreadyExistsException e) {
+//			throw new ServiceException("Could not update the channel", mucRoomEntity.getRoomName(),
+	//				ExceptionType.ALREADY_EXISTS, Response.Status.CONFLICT, e);
+		} catch (CannotBeInvitedException e) {
+			throw new ServiceException("CannotBeInvitedException", mucRoomEntity.getRoomName(),
+					ExceptionType.NOT_ALLOWED, Response.Status.FORBIDDEN, e);
+        }
 	}
 
 	/**
