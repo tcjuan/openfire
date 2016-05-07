@@ -47,7 +47,7 @@ public class ArchiveManagerImpl implements ArchiveManager
         // TODO support groupchat
         if (message.getType() != Message.Type.chat && message.getType() != Message.Type.normal)
         {
-            return;
+      //      return;
         }
 
         if (server.isLocal(message.getFrom()) && incoming)

@@ -785,6 +785,56 @@ public class ConversationManager implements Startable, ComponentEventListener{
 			}
 		}
 	}
+	
+	/* handle stanza to fix groupchat not working issue by TC */
+	void processRoomMessage(JID roomJID, JID sender, String nickname, String body,String stanza, Date date) {
+		String conversationKey = getRoomConversationKey(roomJID);
+		synchronized (conversationKey.intern()) {
+			Conversation conversation = conversations.get(conversationKey);
+			// Create a new conversation if necessary.
+			if (conversation == null) {
+				// Make sure that the user joined the conversation before a message was received
+				Date start = new Date(date.getTime() - 1);
+				conversation = new Conversation(this, roomJID, false, start);
+				conversations.put(conversationKey, conversation);
+				// Notify listeners of the newly created conversation.
+				for (ConversationListener listener : conversationListeners) {
+					listener.conversationCreated(conversation);
+				}
+			}
+			// Check to see if the current conversation exceeds either the max idle time
+			// or max conversation time.
+			else if ((date.getTime() - conversation.getLastActivity().getTime() > idleTime)
+					|| (date.getTime() - conversation.getStartDate().getTime() > maxTime)) {
+				removeConversation(conversationKey, conversation, conversation.getLastActivity());
+				// Make sure that the user joined the conversation before a message was received
+				Date start = new Date(date.getTime() - 1);
+				conversation = new Conversation(this, roomJID, false, start);
+				conversations.put(conversationKey, conversation);
+				// Notify listeners of the newly created conversation.
+				for (ConversationListener listener : conversationListeners) {
+					listener.conversationCreated(conversation);
+				}
+			}
+			// Record the newly received message.
+			conversation.messageReceived(sender, date);
+			if (metadataArchivingEnabled) {
+				conversationQueue.add(conversation);
+			}
+			if (roomArchivingEnabled && (roomsArchived.isEmpty() || roomsArchived.contains(roomJID.getNode()))) {
+				JID jid = new JID(roomJID + "/" + nickname);
+				if (body != null) {
+					/* OF-677 - Workaround to prevent null messages being archived */
+					messageQueue.add(new ArchivedMessage(conversation.getConversationID(), sender, jid, date, body, stanza, false));
+				}
+			}
+			// Notify listeners of the conversation update.
+			for (ConversationListener listener : conversationListeners) {
+				listener.conversationUpdated(conversation, date);
+			}
+		}
+	}
+
 
 	/**
 	 * Notification message indicating that a user joined a groupchat conversation. If no groupchat conversation was taking place in the specified

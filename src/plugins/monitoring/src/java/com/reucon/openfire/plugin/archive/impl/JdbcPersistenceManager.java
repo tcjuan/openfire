@@ -407,14 +407,17 @@ public class JdbcPersistenceManager implements PersistenceManager {
 		else {
 			querySB.append(" ORDER BY ").append(MESSAGE_SENT_DATE);
 		}
-
+		
 		if (xmppResultSet != null) {
+			 Log.info("Query JDBC reslut is not null !");
 			Integer firstIndex = null;
 			int max = xmppResultSet.getMax() != null ? xmppResultSet.getMax() : DEFAULT_MAX;
 			int count = countMessages(startDate, endDate, ownerJid, withJid, whereSB.toString());
 			boolean reverse = false;
 
 			xmppResultSet.setCount(count);
+			
+			 Log.info("Query count => " + count);
 			if (xmppResultSet.getIndex() != null) {
 				firstIndex = xmppResultSet.getIndex();
 			} else if (xmppResultSet.getAfter() != null) {
@@ -451,6 +454,10 @@ public class JdbcPersistenceManager implements PersistenceManager {
 			if(isLastPage(firstIndex, count, max, reverse)) {
 				xmppResultSet.setComplete(true);
 			}
+		}else {
+			
+			 Log.info("Query JDBC reslut is null !");
+			
 		}
 
 		querySB.append(limitSB);
@@ -458,14 +465,21 @@ public class JdbcPersistenceManager implements PersistenceManager {
 		Connection con = null;
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
+		
 		try {
 			con = DbConnectionManager.getConnection();
 			pstmt = con.prepareStatement(querySB.toString());
 			bindMessageParameters(startDate, endDate, ownerJid, withJid, pstmt);
 
 			rs = pstmt.executeQuery();
+			
 			Log.debug("findMessages: SELECT_MESSAGES: " + pstmt.toString());
 			while(rs.next()) {
+				Log.info("retrive message sentDate = " + rs.getLong("sentDate"));
+				Log.info("retrive message message_id =" + rs.getLong("messageID"));
+				Log.info("retrive message stanza = " + rs.getString("stanza"));
+				
+				
 				Date time = millisToDate(rs.getLong("sentDate"));
 				ArchivedMessage archivedMessage = new ArchivedMessage(time, null, null, null);
 				archivedMessage.setId(rs.getLong("messageID"));
@@ -483,7 +497,7 @@ public class JdbcPersistenceManager implements PersistenceManager {
 			xmppResultSet.setFirst(archivedMessages.firstKey());
 			xmppResultSet.setLast(archivedMessages.lastKey());
 		}
-
+		
 		return archivedMessages.values();
 	}
 

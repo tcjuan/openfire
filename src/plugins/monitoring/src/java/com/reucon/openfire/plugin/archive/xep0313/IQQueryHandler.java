@@ -79,9 +79,13 @@ public class IQQueryHandler extends AbstractIQHandler implements
 		sendAcknowledgementResult(packet, session);
 
 		final QueryRequest queryRequest = new QueryRequest(packet.getChildElement(), archiveJid);
+		
 		Collection<ArchivedMessage> archivedMessages = retrieveMessages(queryRequest);
 
 		for(ArchivedMessage archivedMessage : archivedMessages) {
+			 Log.error("Sending ArchiveMessage body" + archivedMessage.getBody());
+			 Log.error("Sending ArchiveMessage stanza" + archivedMessage.getStanza());
+			 
 			sendMessageResult(session, queryRequest, archivedMessage);
 		}
 
@@ -150,6 +154,9 @@ public class IQQueryHandler extends AbstractIQHandler implements
 			Log.error("Error parsing query date filters.", e);
 		}
 
+		 Log.error("Query JID " +queryRequest.getArchive().toBareJID());
+		 Log.error("Query withField " + withField);
+		
 		return getPersistenceManager().findMessages(
 				startDate,
 				endDate,
@@ -206,6 +213,10 @@ public class IQQueryHandler extends AbstractIQHandler implements
 			QueryRequest queryRequest, ArchivedMessage archivedMessage) {
 
 		if(archivedMessage.getStanza() == null) {
+			// Don't send legacy archived messages (that have no stanza)
+			return;
+		}
+		if(archivedMessage.getStanza().isEmpty()) {
 			// Don't send legacy archived messages (that have no stanza)
 			return;
 		}
