@@ -201,7 +201,7 @@ public class Roster implements Cacheable, Externalizable {
             }
         }
  	// Add All Group Members
-          for(Group group : userGroups) {
+   /*       for(Group group : userGroups) {
               Collection<JID> jids = group.getMembers();
               for(JID jid : jids) {
 		      try{
@@ -217,6 +217,7 @@ public class Roster implements Cacheable, Externalizable {
 
 
            }
+*/
         // Fire event indicating that a roster has just been loaded
         RosterEventDispatcher.rosterLoaded(this);
     }

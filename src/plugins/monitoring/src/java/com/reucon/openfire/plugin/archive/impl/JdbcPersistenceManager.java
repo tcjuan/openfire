@@ -199,7 +199,8 @@ public class JdbcPersistenceManager implements PersistenceManager {
 			appendWhere(whereSB, CONVERSATION_END_TIME, " <= ?");
 		}
 		if (ownerJid != null) {
-			appendWhere(whereSB, CONVERSATION_OWNER_JID, " = ?");
+			appendWhere(whereSB, CONVERSATION_OWNER_JID, " = ? ");
+			
 		}
 		if (withJid != null) {
 			appendWhere(whereSB, CONVERSATION_WITH_JID, " = ?");
@@ -391,7 +392,7 @@ public class JdbcPersistenceManager implements PersistenceManager {
 			appendWhere(whereSB, MESSAGE_SENT_DATE, " <= ?");
 		}
 		if (ownerJid != null) {
-			appendWhere(whereSB, CONVERSATION_OWNER_JID, " = ?");
+			appendWhere(whereSB, "(" , CONVERSATION_OWNER_JID, " = ? OR " , "ofConParticipant.bareJID", " = ", "'admin@ss.ohana.cc'" ,")" );
 		}
 		if(withJid != null) {
 			appendWhere(whereSB, "( ", MESSAGE_TO_JID, " = ? OR ", MESSAGE_FROM_JID, " = ? )");
@@ -403,9 +404,11 @@ public class JdbcPersistenceManager implements PersistenceManager {
 		if (DbConnectionManager.getDatabaseType() == DbConnectionManager.DatabaseType.sqlserver) {
 			querySB.insert(0,"SELECT * FROM (SELECT *, ROW_NUMBER() OVER (ORDER BY "+MESSAGE_SENT_DATE+") AS RowNum FROM ( ");
 			querySB.append(") ofMessageArchive ) t2 WHERE RowNum");
+			
 		}
 		else {
 			querySB.append(" ORDER BY ").append(MESSAGE_SENT_DATE);
+			
 		}
 		
 		if (xmppResultSet != null) {
@@ -518,6 +521,7 @@ public class JdbcPersistenceManager implements PersistenceManager {
 			con = DbConnectionManager.getConnection();
 			pstmt = con.prepareStatement(querySB.toString());
 			bindMessageParameters(startDate, endDate, ownerJid, withJid, pstmt);
+			 Log.info("pstmt query => " + pstmt);
 			rs = pstmt.executeQuery();
 			if (rs.next()) {
 				return rs.getInt(1);
@@ -554,6 +558,8 @@ public class JdbcPersistenceManager implements PersistenceManager {
 			pstmt = con.prepareStatement(querySB.toString());
 			parameterIndex = bindMessageParameters(startDate, endDate, ownerJid, withJid, pstmt);
 			pstmt.setLong(parameterIndex, before);
+			
+			 Log.info("pstmt query => " + pstmt);
 			rs = pstmt.executeQuery();
 			if (rs.next()) {
 				return rs.getInt(1);
