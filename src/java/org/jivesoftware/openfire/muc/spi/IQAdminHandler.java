@@ -284,7 +284,20 @@ public class IQAdminHandler {
                     nick = item.attributeValue("nick");
                     if (hasJID) {
                     	// could be a group JID
-                        jids.add(GroupJID.fromString(item.attributeValue("jid")));
+                    	
+                    	String[] temp_ = item.attributeValue("jid").split("@");
+                    	logger.info("should send invitation =>" + item.attributeValue("jid"));
+                    		if (!temp_[0].isEmpty()){
+                    			if (GroupJID.isGroup(GroupJID.fromString(item.attributeValue("jid")))) {
+                    				jids.add(GroupJID.fromString(item.attributeValue("jid")));
+                    			}else{
+                    				JID temp_jid = new JID(item.attributeValue("jid"));
+                    				logger.info("add to send invitation list =>" + temp_jid);
+                    				jids.add(temp_jid);
+                    		
+                    			}
+                    		}
+                    	
                     } else {
                         // Get the JID based on the requested nick
                         for (MUCRole role : room.getOccupantsByNickname(nick)) {
@@ -333,6 +346,7 @@ public class IQAdminHandler {
                             	}
                             	for (JID invitee : invitees) {
                             		room.sendInvitation(invitee, null, senderRole, null);
+                            		logger.info("send invitation =>" + invitee);
                             	}
                             }
                         } else if ("outcast".equals(target)) {

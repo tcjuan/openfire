@@ -162,6 +162,24 @@ public class MUCRoomController {
 			String roomName = roomJID.getNode();
 		//	MUCRoom room = webManager.getMultiUserChatManager().getMultiUserChatService(roomJID).getChatRoom(roomName);
 			ArrayList<String> memberJIDs = new ArrayList<String>();
+			
+			if (!mucRoomEntity.getMembers().isEmpty()) {
+                // Escape username
+				for (String userJID : mucRoomEntity.getMembers()) {
+					 if (userJID.indexOf('@') == -1) {
+		                    String username = JID.escapeNode(userJID);
+		                    String domain = "ss.ohana.cc";
+		                    userJID = username + '@' + domain;
+		                }
+		                else {
+		                    String username = JID.escapeNode(userJID.substring(0, userJID.indexOf('@')));
+		                    String rest = userJID.substring(userJID.indexOf('@'), userJID.length());
+		                    userJID = username + rest.trim();
+		                }
+		         memberJIDs.add(userJID);
+	    		}
+        	}
+			
 			if (!mucRoomEntity.getmemberGroups().isEmpty()) {
 	    		// create a group JID for each group
 	    		for (String groupName : mucRoomEntity.getmemberGroups()) {
